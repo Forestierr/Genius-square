@@ -1,5 +1,5 @@
 import unittest
-from src.solver import generer_rotations, tourner_piece, normaliser, generer_rotations_et_symetries
+from src.solver import *
 from src.game import PIECES
 
 class TestSolver(unittest.TestCase):
@@ -137,3 +137,27 @@ class TestSolver(unittest.TestCase):
 		self.assertEqual(len(rotations), len(expected))
 		for rotation in rotations:
 			self.assertIn(rotation, expected)
+
+	def test_difficulte(self):
+		from src.game import Difficulte
+		self.assertEqual(Difficulte.get_diff(0), Difficulte.WIZARD)
+		self.assertEqual(Difficulte.get_diff(1), Difficulte.MASTER)
+		self.assertEqual(Difficulte.get_diff(2), Difficulte.EXPERT)
+		self.assertEqual(Difficulte.get_diff(3), Difficulte.JUNIOR)
+		self.assertEqual(Difficulte.get_diff(4), Difficulte.STARTER)
+		self.assertEqual(Difficulte.get_diff(5), Difficulte.STARTER)
+
+	def test_verifier_placement_diff(self):
+		grille = [[0] * 7 for _ in range(7)]
+		piece = PIECES[7]["coords"]
+		# Placer la pièce dans la grille
+		for x, y in piece:
+			grille[x][y] = 8
+
+		piece = PIECES[8]["coords"]
+
+		self.assertTrue(verifier_placement_diff(grille, piece, 8, 1, 1, 4))
+
+		self.assertFalse(verifier_placement_diff(grille, piece, 8, 1, 1, 3))
+		self.assertTrue(verifier_placement_diff(grille, piece, 8, 2, 1, 3))
+		self.assertTrue(verifier_placement_diff(grille, piece, 8, 1, 2, 3))

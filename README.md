@@ -25,11 +25,28 @@ Race your opponent to fill the empty spaces on the game board using the 9 puzzle
 
 The first player to fill their game board wins the game.
 
+### Add difficulty
+
+As levels increase in difficulty, certain pieces cannot
+be placed next to each other (although they can
+still touch at the corners). To clearly indicate which
+pieces cannot touch, turn the white square markers
+of those specific pieces face up.
+
+- **STARTER**: all pieces can be placed next to each other.
+- **JUNIOR**: 1 and 2 cannot be placed next to each other.
+- **EXPERT**: 1, 2, and 3 cannot be placed next to each other.
+- **MASTER**: 2, 3, and 4 cannot be placed next to each other.
+- **WIZARD**: 1, 2, 3, and 4 cannot be placed next to each other.
+
+![difficulty_pieces.png](doc/img/difficulty_pieces.png)
+
 ## Features
 
 - **Interactive Gameplay**: Add obstacles by clicking on the grid.
 - **Automatic Solver**: Uses a backtracking algorithm or binary linear programming model to find solutions.
 - **Reset Functionality**: Press `R` to reset the game and start over.
+- **Difficulty Levels**: Change the difficulty of the game by clicking on the "Difficulty" button, which adjusts the rules for piece placement.
 
 ## Installation
 
@@ -56,6 +73,14 @@ The first player to fill their game board wins the game.
 1. Run the program using Python.
 2. Click on the grid to place the 7 blockers.
 3. Watch the solver find a solution or reset the game by pressing `r`.
+
+### Change the difficulty
+
+To change the difficulty, you can click on the "Difficulty" button on the right side of the grid.
+`S` for Starter, `J` for Junior, `E` for Expert, `M` for Master, and `W` for Wizard.
+To understand the difficulty, refer to the rules of the game section above.
+
+> Notes: The difficulty is only implemented in the backpropagation solver.
 
 ## Screenshots
 

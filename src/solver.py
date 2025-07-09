@@ -46,22 +46,84 @@ def generer_rotations_et_symetries(piece):
             current = tourner_piece(current)
     return [list(forme) for forme in formes]
 
+def verifier_placement_diff(grille, piece, piece_indice, x, y, diff):
+    """
+    Vérifie si une pièce peut être placée sur la grille à la position (x, y)
+    en respectant les règles de difficulté.
+
+    Les pièces concernées ne doivent pas etre en contate directe ensemble.
+    Mais peuvent se toucher par les coins.
+
+    - diff 4 : rien
+    - diff 3 : piece 8 ne doit pas être adjacente à la piece 7
+    - diff 2 : les pieces 8, 7 et 6 ne doivent pas être adjacentes
+    - diff 1 : les pieces 7, 6, 5 ne doivent pas être adjacentes
+    - diff 0 : les piece 8, 7, 6, 5 ne doivent pas être adjacentes
+    """
+
+    piece_pas_cote = [[8, 7, 6, 5], [7, 6, 5], [8, 7, 6], [8, 7]]
+
+    if diff == 4:
+        return True  # Pas de restrictions
+
+    if piece_indice < 5:
+        return True  # Les pièces 0 à 4 n'ont pas de restrictions
+
+    if piece_indice not in piece_pas_cote[diff]:
+        return True  # Cette pièce n'a pas de restrictions pour ce niveau de difficulté
+
+    # Obtenir les pièces interdites pour ce niveau de difficulté
+    pieces_interdites = piece_pas_cote[diff]
+    # Directions adjacentes (haut, bas, gauche, droite) - exclut les diagonales
+    directions_adjacentes = [(0, 1), (0, -1), (1, 0), (-1, 0)]
+
+    # Vérifier chaque case de la pièce
+    for dx, dy in piece:
+        piece_x = x + dx
+        piece_y = y + dy
+
+        # Vérifier toutes les cases adjacentes à cette case de la pièce
+        for adj_dx, adj_dy in directions_adjacentes:
+            adj_x = piece_x + adj_dx
+            adj_y = piece_y + adj_dy
+
+            # Vérifier que la case adjacente est dans les limites de la grille
+            if 0 <= adj_x < TAILLE_GRILLE and 0 <= adj_y < TAILLE_GRILLE:
+                valeur_case = grille[adj_y][adj_x]
+                # Si la case contient une pièce (valeur > 0)
+                if valeur_case > 0:
+                    # Convertir la valeur de la grille en index de pièce (valeur - 1)
+                    piece_adjacente = valeur_case - 1 #TODO: Vérifier si -1 est correct
+
+                    # Vérifier si cette pièce adjacente est dans la liste des pièces interdites
+                    if piece_adjacente in pieces_interdites and piece_adjacente != piece_indice:
+                        return False  # Placement invalide
+
+    return True
+
+
 # Algorithme de backtracking
 def placer_piece(grille, piece, x, y, valeur):
     for dx, dy in piece:
         nx, ny = x + dx, y + dy
         grille[ny][nx] = valeur
 
-def peut_placer_piece(grille, piece, x, y):
+def peut_placer_piece(grille, piece, x, y, diff, piece_indice=None):
     for dx, dy in piece:
         nx, ny = x + dx, y + dy
         if not (0 <= nx < TAILLE_GRILLE and 0 <= ny < TAILLE_GRILLE):
             return False
         if grille[ny][nx] != 0:
             return False
+
+    # Vérifier les contraintes de difficulté si l'index de la pièce est fourni
+    if piece_indice is not None and diff < 4:
+        if not verifier_placement_diff(grille, piece, piece_indice, x, y, diff):
+            return False
+
     return True
 
-def resoudre(grille, pieces, index):
+def resoudre(grille, pieces, index, diff):
     if index == len(pieces):
         return True
 
@@ -70,19 +132,19 @@ def resoudre(grille, pieces, index):
     for rotation in rotations:
         for y in range(TAILLE_GRILLE):
             for x in range(TAILLE_GRILLE):
-                if peut_placer_piece(grille, rotation, x, y):
+                if peut_placer_piece(grille, rotation, x, y, diff, index):
                     placer_piece(grille, rotation, x, y, index + 1)
-                    if resoudre(grille, pieces, index + 1):
+                    if resoudre(grille, pieces, index + 1, diff):
                         return True
                     placer_piece(grille, rotation, x, y, 0)
     return False
 
-def trouver_solution_backpropagation(obstacles, pieces):
+def trouver_solution_backpropagation(obstacles, pieces, diff):
     global iter
     grille = [[0] * TAILLE_GRILLE for _ in range(TAILLE_GRILLE)]
     for x, y in obstacles:
         grille[y][x] = -1
-    if resoudre(grille, pieces, 0):
+    if resoudre(grille, pieces, 0, diff):
         return grille
     else:
         return None
@@ -142,7 +204,7 @@ def get_valid_placements_for_piece(grille, piece_index):
 
     return placements
 
-def solveur_lineaire(grille, pieces):
+def solveur_lineaire(grille, pieces, diff=4):
     model = LpProblem("GeniusSquareSolver", LpMinimize)
 
     variables = {}
@@ -185,7 +247,34 @@ def solveur_lineaire(grille, pieces):
                 else:
                     print(f"Aucune pièce ne peut couvrir la case ({x}, {y})")
                     return None
-
+    """
+    # Contraintes de difficulté : empêcher certaines pièces d'être adjacentes
+    piece_pas_cote = [[8, 7, 6, 5], [7, 6, 5], [8, 7, 6], [8, 7]]
+    if diff < 4:
+        # Pour chaque paire de pièces concernées
+        pieces_interdites = piece_pas_cote[diff]
+        for i in range(len(pieces)):
+            if i not in pieces_interdites:
+                continue
+            for j in pieces_interdites:
+                if j <= i:
+                    continue  # éviter les doublons et auto-vérification
+                # Pour chaque placement possible de i et j
+                for idx_i, ((x_i, y_i), shape_i) in enumerate(placement_data[i]):
+                    coords_i = set((x_i + dx, y_i + dy) for dx, dy in shape_i)
+                    adjacents_i = set()
+                    for (xi, yi) in coords_i:
+                        for dx, dy in [(0,1),(1,0),(-1,0),(0,-1)]:
+                            adjacents_i.add((xi+dx, yi+dy))
+                    for idx_j, ((x_j, y_j), shape_j) in enumerate(placement_data[j]):
+                        coords_j = set((x_j + dx, y_j + dy) for dx, dy in shape_j)
+                        # Vérifier s'il y a au moins une case adjacente
+                        if coords_i & coords_j:
+                            continue  # ils se recouvrent, déjà interdit par ailleurs
+                        if adjacents_i & coords_j:
+                            # Ajout de la contrainte : pas les deux placements en même temps
+                            model += variables[(i, idx_i)] + variables[(j, idx_j)] <= 1
+    """
     # Fonction objectif (minimiser - peut être n'importe quoi)
     model += 0
 
@@ -208,10 +297,8 @@ def solveur_lineaire(grille, pieces):
 
     return solution
 
-def trouver_solution_lineaire(obstacles, pieces):
+def trouver_solution_lineaire(obstacles, pieces, diff=4):
     grille = [[0] * TAILLE_GRILLE for _ in range(TAILLE_GRILLE)]
     for x, y in obstacles:
         grille[y][x] = -1
-    return solveur_lineaire(grille, pieces)
-
-
+    return solveur_lineaire(grille, pieces, diff)
